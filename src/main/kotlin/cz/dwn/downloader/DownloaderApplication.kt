@@ -2,11 +2,8 @@ package cz.dwn.downloader
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
-import org.tbk.tor.spring.config.TorHiddenServiceAutoConfiguration
 
-@SpringBootApplication(
-    exclude = [TorHiddenServiceAutoConfiguration::class]
-)
+@SpringBootApplication
 class DownloaderApplication
 
 fun main(args: Array<String>) {

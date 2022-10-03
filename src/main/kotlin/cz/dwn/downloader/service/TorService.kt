@@ -5,13 +5,11 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.util.EntityUtils
-import org.berndpruenster.netlayer.tor.Tor
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import org.tbk.tor.hs.HiddenServiceDefinition
 import reactor.core.publisher.Flux
 import java.io.IOException
 import java.net.URI

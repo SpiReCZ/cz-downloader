@@ -1,0 +1,6 @@
+#org.tbk.tor.auto-publish-enabled=false
+
+org:
+  tbk:
+    tor:
+      auto-publish-enabled: false

@@ -1,44 +1,46 @@
 package cz.dwn.downloader.service
 
-import ai.djl.inference.*
-import ai.djl.modality.*
-import ai.djl.modality.cv.*
-import ai.djl.modality.cv.util.*
-import ai.djl.ndarray.*
+import ai.djl.inference.Predictor
+import ai.djl.modality.cv.Image
+import ai.djl.ndarray.NDList
 import ai.djl.ndarray.types.DataType
-import ai.djl.repository.zoo.*
-import ai.djl.training.util.*
-import ai.djl.translate.*
-import ai.djl.util.*
+import ai.djl.repository.zoo.Criteria
+import ai.djl.repository.zoo.ZooModel
+import ai.djl.training.util.ProgressBar
+import ai.djl.translate.Batchifier
+import ai.djl.translate.Translator
+import ai.djl.translate.TranslatorContext
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import java.net.*
-import java.nio.file.*
-import java.util.*
 
 
 @Service
 class UloztoCaptchaService {
     private val log = LoggerFactory.getLogger("captcha-breaker")
 
+    /*
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
-        test()
-    }
-
-    private fun test() {
         val captchaImage = BufferedImageFactory.getInstance()
             .fromFile(Paths.get("image2.jpg"))
+        val captchaValue = runBlocking {
+            solve(captchaImage)
+        }
+        log.info("CAPTCHA auto solved as '${captchaValue}'")
+    }
+
+     */
+
+    suspend fun solve(captchaImage: Image): String {
         with(loadModel()) {
             val predictor: Predictor<Image, String> = this.newPredictor()
-            val captcheValue = predictor.predict(captchaImage)
-            log.info("CAPTCHA auto solved as '${captcheValue}'")
+            val captchaValue = predictor.predict(captchaImage)
+            log.info("CAPTCHA auto solved as '${captchaValue}'")
+            return captchaValue
         }
     }
 
-    private fun loadModel(): ZooModel<Image, String> {
+    private suspend fun loadModel(): ZooModel<Image, String> {
         val modelUrl = "https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.zip";
         val criteria: Criteria<Image, String> = Criteria.builder()
             .setTypes(Image::class.java, String::class.java)
@@ -70,13 +72,9 @@ class UloztoCaptchaTranslator : Translator<Image, String> {
     override fun processOutput(ctx: TranslatorContext?, list: NDList?): String {
         val probabilities = list!!.singletonOrThrow()
         val indices = probabilities.argMax(2)
-        return decode(indices)
-    }
-
-    private fun decode(indexes: NDArray): String {
         return buildString {
-            for (i: Long in indexes.toLongArray()) {
-                this.append(availableChars[i.toInt()])
+            for (l in indices.toLongArray()) {
+                this.append(availableChars[l.toInt()])
             }
         }
     }

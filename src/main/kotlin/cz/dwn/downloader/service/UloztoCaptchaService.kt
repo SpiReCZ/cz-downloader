@@ -82,7 +82,7 @@ class UloztoCaptchaTranslator : Translator<Image, String> {
     }
 
     override fun getBatchifier(): Batchifier? {
-        // stack would
+        // Batchifier would normally modify array to be 4 dimensional, but we do this manually
         //return Batchifier.STACK
         return null
     }

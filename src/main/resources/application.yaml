@@ -4,3 +4,4 @@ org:
   tbk:
     tor:
       auto-publish-enabled: false
+      enabled: false

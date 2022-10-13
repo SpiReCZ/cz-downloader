@@ -6,7 +6,6 @@ import ai.djl.ndarray.NDList
 import ai.djl.ndarray.types.DataType
 import ai.djl.repository.zoo.Criteria
 import ai.djl.repository.zoo.ZooModel
-import ai.djl.training.util.ProgressBar
 import ai.djl.translate.Batchifier
 import ai.djl.translate.Translator
 import ai.djl.translate.TranslatorContext
@@ -16,44 +15,41 @@ import org.springframework.stereotype.Service
 
 @Service
 class UloztoCaptchaService {
+
     private val log = LoggerFactory.getLogger("captcha-breaker")
 
-    /*
-    @EventListener(ApplicationReadyEvent::class)
-    fun doSomethingAfterStartup() {
-        val captchaImage = BufferedImageFactory.getInstance()
-            .fromFile(Paths.get("image2.jpg"))
-        val captchaValue = runBlocking {
-            solve(captchaImage)
-        }
-        log.info("CAPTCHA auto solved as '${captchaValue}'")
-    }
+    private val model: ZooModel<Image, String>
+    private val predictor: Predictor<Image, String>
 
-     */
+    init {
+        model = loadModel(MODEL_URL)
+        predictor = model.newPredictor()
+    }
 
     suspend fun solve(captchaImage: Image): String {
-        with(loadModel()) {
-            val predictor: Predictor<Image, String> = this.newPredictor()
-            val captchaValue = predictor.predict(captchaImage)
-            log.info("CAPTCHA auto solved as '${captchaValue}'")
-            return captchaValue
-        }
+        val captchaValue = predictor.predict(captchaImage)
+        log.info("CAPTCHA auto solved as '${captchaValue}'")
+        return captchaValue
     }
 
-    private suspend fun loadModel(): ZooModel<Image, String> {
-        val modelUrl = "https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.zip";
+    private fun loadModel(modelUris: String): ZooModel<Image, String> {
         val criteria: Criteria<Image, String> = Criteria.builder()
             .setTypes(Image::class.java, String::class.java)
-            .optModelUrls(modelUrl)
-            .optTranslator(UloztoCaptchaTranslator())
-            .optProgress(ProgressBar())
+            .optModelUrls(modelUris)
+            .optTranslator(UloztoCaptchaTranslator)
+            //.optProgress(ProgressBar())
             .build()
         return criteria.loadModel()
     }
+
+    companion object {
+        @JvmStatic val MODEL_URL =
+            "https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.zip"
+    }
 }
 
-class UloztoCaptchaTranslator : Translator<Image, String> {
-    private val availableChars = "abcdefghijklmnopqrstuvwxyz"
+object UloztoCaptchaTranslator : Translator<Image, String> {
+    private const val availableChars = "abcdefghijklmnopqrstuvwxyz"
 
     override fun processInput(ctx: TranslatorContext?, input: Image?): NDList {
         val manager = ctx!!.ndManager
@@ -73,15 +69,14 @@ class UloztoCaptchaTranslator : Translator<Image, String> {
         val probabilities = list!!.singletonOrThrow()
         val indices = probabilities.argMax(2)
         return buildString {
-            for (l in indices.toLongArray()) {
-                this.append(availableChars[l.toInt()])
+            for (charPosition in indices.toLongArray()) {
+                this.append(availableChars[charPosition.toInt()])
             }
         }
     }
 
-    override fun getBatchifier(): Batchifier? {
-        // Batchifier would normally modify array to be 4 dimensional, but we do this manually
-        //return Batchifier.STACK
-        return null
-    }
+    /**
+     * Batchifier would normally modify array to be 4 dimensional, but we do this manually
+     */
+    override fun getBatchifier(): Batchifier? = null
 }

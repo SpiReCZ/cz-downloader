@@ -2,11 +2,12 @@ package cz.dwn.downloader.service
 
 import ai.djl.modality.cv.BufferedImageFactory
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Test
-
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import java.nio.file.Paths
+import org.springframework.core.io.ClassPathResource
 
 @SpringBootTest
 internal class UloztoCaptchaServiceTest {
@@ -14,14 +15,15 @@ internal class UloztoCaptchaServiceTest {
     @Autowired
     private lateinit var captchaService: UloztoCaptchaService
 
-    @Test
-    fun solve() {
-        val captchaImage = BufferedImageFactory.getInstance()
-            .fromFile(Paths.get("image2.jpg"))
-        fun solve() = runBlocking {
+    @ParameterizedTest
+    @ValueSource(strings = ["ovnh", "pkqt"])
+    fun solve(captchaValue: String) {
+        val captchaImage = with(ClassPathResource("captchas/${captchaValue}.jpg").inputStream) {
+            BufferedImageFactory.getInstance().fromInputStream(this)
+        }
+        val computedCaptchaValue = runBlocking {
             captchaService.solve(captchaImage)
         }
-        val captchaValue = solve()
-        println(captchaValue)
+        assertThat(computedCaptchaValue).isEqualTo(captchaValue)
     }
 }

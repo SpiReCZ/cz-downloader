@@ -13,12 +13,11 @@ class TorConfig {
     @Throws(IOException::class)
     fun torrc(): Torrc {
         val torrcEntries: LinkedHashMap<String, String> = LinkedHashMap<String, String>()
+        // It is required to set post statically
         torrcEntries["ControlPort"] = "44443"
         torrcEntries["SOCKSPort"] = "44444"
-        torrcEntries["CookieAuthentication"] = "1"
-        torrcEntries["AvoidDiskWrites"] = "1"
+        // We cannot run as Daemon
         torrcEntries["RunAsDaemon"] = "0"
-        torrcEntries["DisableNetwork"] = "0"
         return Torrc(torrcEntries)
     }
 }

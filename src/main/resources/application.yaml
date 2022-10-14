@@ -4,4 +4,8 @@ org:
   tbk:
     tor:
       auto-publish-enabled: false
-      enabled: false
+      #enabled: false
+
+logging:
+  level:
+    org.berndpruenster.netlayer.tor: debug

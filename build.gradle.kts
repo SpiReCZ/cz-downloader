@@ -20,6 +20,7 @@ configurations {
 }
 
 repositories {
+    mavenLocal()
     maven { url = uri("https://repo.spring.io/release") }
     mavenCentral()
     // TOR Onion Proxy

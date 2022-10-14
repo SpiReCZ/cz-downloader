@@ -1,6 +1,5 @@
 package cz.dwn.downloader.service
 
-import cz.dwn.downloader.tor.DisposableTorFactory
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.utils.URIBuilder
@@ -21,40 +20,22 @@ import java.time.Duration
 
 
 @Service
-class TorService(private val tor: Tor, private val disposableTorFactory: DisposableTorFactory, @Qualifier("torHttpClient") private val torHttpClient: CloseableHttpClient) {
-
-    /*
-
-    @Autowired(required = false)
-    @Qualifier("applicationHiddenServiceDefinition")
-    private val applicationHiddenServiceDefinition: HiddenServiceDefinition? = null
-     */
+class TorService(private val tor: Tor, @Qualifier("torHttpClient") private val torHttpClient: CloseableHttpClient) {
 
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
         test()
     }
 
-    fun Tor.disconnect() {
+    fun Tor.reload() {
         val torControllerField: Field = Tor::class.java.getDeclaredField("torController")
         torControllerField.isAccessible = true
         val torController: TorController = torControllerField.get(this) as TorController
         torController.setConf("DisableNetwork", "1")
         torController.setConf("DisableNetwork", "0")
-        //torController.reload()
-        torController.disconnect()
     }
-
-    /*
-    fun TorController.reload() {
-        signal("RELOAD")
-    }
-
-     */
 
     fun test() {
-        tor.disconnect()
-
         val url: URI = URIBuilder()
             .setScheme("https")
             .setHost("api.myip.com")
@@ -69,7 +50,6 @@ class TorService(private val tor: Tor, private val disposableTorFactory: Disposa
             .build()
 
         while (true) {
-            val disposableTor = disposableTorFactory.create().block()
 
             val request = HttpGet(url)
             request.config = requestConfig
@@ -89,7 +69,7 @@ class TorService(private val tor: Tor, private val disposableTorFactory: Disposa
                 .blockFirst(Duration.ofMinutes(3))
 
             print(body)
-            disposableTor!!.disconnect()
+            tor.reload()
             Thread.sleep(2000)
         }
     }

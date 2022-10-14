@@ -6,7 +6,7 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicInteger
 
-
+@Throws(TorCtlException::class)
 fun obtainFreePorts(): Pair<Int, Int> {
     val initialPortValue = 0
     val port1 = AtomicInteger(initialPortValue)

@@ -1,7 +1,6 @@
 package cz.dwn.downloader.config
 
 import cz.dwn.downloader.tor.obtainFreePorts
-import org.berndpruenster.netlayer.tor.TorCtlException
 import org.berndpruenster.netlayer.tor.Torrc
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -10,7 +9,7 @@ import java.util.*
 
 
 @Configuration
-class TorConfig @Throws(TorCtlException::class) constructor() {
+class TorConfig {
 
     @Bean
     @Throws(IOException::class)
@@ -20,8 +19,6 @@ class TorConfig @Throws(TorCtlException::class) constructor() {
         // It is required to set ports manually
         overrides["ControlPort"] = ports.first.toString()
         overrides["SOCKSPort"] = ports.second.toString()
-        // We cannot run as Daemon
-        overrides["RunAsDaemon"] = "0"
         return Torrc(overrides)
     }
 

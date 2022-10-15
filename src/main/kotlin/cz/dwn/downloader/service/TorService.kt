@@ -72,7 +72,9 @@ class TorService(tor: Tor, @Qualifier("torHttpClient") private val torHttpClient
 
     @Throws(IOException::class, ClientProtocolException::class)
     fun makeRequest(request: HttpRequestBase): Flow<CloseableHttpResponse> {
-        return flowOf(torHttpClient.execute(request)).flowOn(Dispatchers.IO).retryWhen { cause, attempt ->
+        return flowOf(torHttpClient.execute(request))
+            .flowOn(Dispatchers.IO)
+            .retryWhen { cause, attempt ->
             log.warn("Retrying Tor network request..")
             delay(1000)
             attempt < 3 || cause is IOException

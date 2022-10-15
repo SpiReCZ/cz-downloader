@@ -6,6 +6,11 @@ org:
       auto-publish-enabled: false
       #enabled: false
 
+app:
+  downloader:
+    model:
+      ulozto: https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.zip
+
 logging:
   level:
     org.berndpruenster.netlayer.tor: debug

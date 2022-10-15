@@ -9,12 +9,13 @@ import ai.djl.repository.zoo.ZooModel
 import ai.djl.translate.Batchifier
 import ai.djl.translate.Translator
 import ai.djl.translate.TranslatorContext
+import cz.dwn.downloader.props.AppModelProps
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 
 @Service
-class UloztoCaptchaService {
+class UloztoCaptchaService(models: AppModelProps) {
 
     private val log = LoggerFactory.getLogger("captcha-breaker")
 
@@ -22,7 +23,7 @@ class UloztoCaptchaService {
     private val predictor: Predictor<Image, String>
 
     init {
-        model = loadModel(MODEL_URL)
+        model = loadModel(models.ulozto)
         predictor = model.newPredictor()
     }
 
@@ -40,11 +41,6 @@ class UloztoCaptchaService {
             //.optProgress(ProgressBar())
             .build()
         return criteria.loadModel()
-    }
-
-    companion object {
-        @JvmStatic val MODEL_URL =
-            "https://github.com/JanPalasek/ulozto-captcha-breaker/releases/download/v2.2/model.zip"
     }
 }
 

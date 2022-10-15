@@ -6,7 +6,7 @@ plugins {
     id("io.spring.dependency-management") version "1.0.14.RELEASE"
     kotlin("jvm") version "1.6.21"
     kotlin("plugin.spring") version "1.6.21"
-    //id("org.springframework.experimental.aot") version "0.12.1"
+    id("org.springframework.experimental.aot") version "0.12.1"
 }
 
 group = "cz.dwn"
@@ -29,6 +29,7 @@ repositories {
 
 extra["springBootAdminVersion"] = "2.7.4"
 extra["springCloudVersion"] = "2021.0.4"
+extra["djlVersion"] = "0.19.0"
 
 dependencies {
     // Default
@@ -64,6 +65,7 @@ dependencyManagement {
     imports {
         mavenBom("de.codecentric:spring-boot-admin-dependencies:${property("springBootAdminVersion")}")
         mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+        //mavenBom("ai.djl:bom:${property("djlVersion")}")
     }
 }
 
@@ -77,10 +79,11 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
-/*
+
 tasks.withType<BootBuildImage> {
 	builder = "paketobuildpacks/builder:tiny"
-	environment = mapOf("BP_NATIVE_IMAGE" to "true")
+	environment = mapOf(
+        "BP_NATIVE_IMAGE" to "true",
+        "TF_CPP_MIN_LOG_LEVEL" to "1"
+    )
 }
-
- */

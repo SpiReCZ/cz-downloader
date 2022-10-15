@@ -8,8 +8,11 @@ import org.apache.http.util.EntityUtils
 import org.berndpruenster.netlayer.tor.Tor
 import org.berndpruenster.netlayer.tor.TorController
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
+import org.springframework.nativex.hint.FieldHint
+import org.springframework.nativex.hint.TypeHint
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import java.io.IOException
@@ -20,6 +23,7 @@ import java.time.Duration
 
 
 @Service
+@ConditionalOnBean(Tor::class)
 class TorService(private val tor: Tor, @Qualifier("torHttpClient") private val torHttpClient: CloseableHttpClient) {
 
     @EventListener(ApplicationReadyEvent::class)
@@ -27,6 +31,7 @@ class TorService(private val tor: Tor, @Qualifier("torHttpClient") private val t
         test()
     }
 
+    @TypeHint(types = [Tor::class], fields = [FieldHint(name = "torController")])
     fun Tor.reload() {
         val torControllerField: Field = Tor::class.java.getDeclaredField("torController")
         torControllerField.isAccessible = true

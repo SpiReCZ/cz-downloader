@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 
-@Service
+//@Service
 class UloztoCaptchaService(models: AppModelProps) {
 
     private val log = LoggerFactory.getLogger("captcha-breaker")

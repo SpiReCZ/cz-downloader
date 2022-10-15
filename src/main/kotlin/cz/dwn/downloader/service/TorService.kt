@@ -1,6 +1,7 @@
 package cz.dwn.downloader.service
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.CloseableHttpResponse
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Flux
 import java.io.IOException
 import java.lang.reflect.Field
 import java.net.URI
@@ -62,7 +62,7 @@ class TorService(tor: Tor, @Qualifier("torHttpClient") private val torHttpClient
             val request = HttpGet(url)
             request.config = requestConfig
 
-            makeRequest(request).use {
+            makeRequest(request).single().use {
                 print(EntityUtils.toString(it.entity, StandardCharsets.UTF_8))
             }
 
@@ -71,25 +71,17 @@ class TorService(tor: Tor, @Qualifier("torHttpClient") private val torHttpClient
     }
 
     @Throws(IOException::class, ClientProtocolException::class)
-    suspend fun makeRequest(request: HttpRequestBase): CloseableHttpResponse {
-        val response = withContext(Dispatchers.IO) {
-            Flux.interval(Duration.ofSeconds(10))
-                .flatMap { _: Long? ->
-                    try {
-                        return@flatMap Flux.just(torHttpClient.execute(request))
-                    } catch (e: IOException) {
-                        print("Exception while polling for ${request.uri}: ${e.message}")
-                        return@flatMap Flux.empty<CloseableHttpResponse>()
-                    }
-                }
-                .blockFirst(Duration.ofMinutes(3))
+    fun makeRequest(request: HttpRequestBase): Flow<CloseableHttpResponse> {
+        return flowOf(torHttpClient.execute(request)).flowOn(Dispatchers.IO).retryWhen { cause, attempt ->
+            log.warn("Retrying Tor network request..")
+            delay(1000)
+            attempt < 3 || cause is IOException
         }
-        return response!!
     }
 
     suspend fun reloadNetwork() {
         disableNetwork()
-        delay(1000)
+        delay(2000)
         enableNetwork()
     }
 

@@ -4,6 +4,7 @@ org:
   tbk:
     tor:
       auto-publish-enabled: false
+      startup-timeout: 120s
       #enabled: false
 
 app:

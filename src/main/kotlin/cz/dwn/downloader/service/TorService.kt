@@ -22,7 +22,6 @@ import java.lang.reflect.Field
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Duration
-import kotlin.jvm.Throws
 
 
 @Service
@@ -73,16 +72,18 @@ class TorService(tor: Tor, @Qualifier("torHttpClient") private val torHttpClient
 
     @Throws(IOException::class, ClientProtocolException::class)
     suspend fun makeRequest(request: HttpRequestBase): CloseableHttpResponse {
-        val response = Flux.interval(Duration.ofSeconds(10))
-            .flatMap { _: Long? ->
-                try {
-                    return@flatMap Flux.just(torHttpClient.execute(request))
-                } catch (e: IOException) {
-                    print("Exception while polling for ${request.uri}: ${e.message}")
-                    return@flatMap Flux.empty<CloseableHttpResponse>()
+        val response = withContext(Dispatchers.IO) {
+            Flux.interval(Duration.ofSeconds(10))
+                .flatMap { _: Long? ->
+                    try {
+                        return@flatMap Flux.just(torHttpClient.execute(request))
+                    } catch (e: IOException) {
+                        print("Exception while polling for ${request.uri}: ${e.message}")
+                        return@flatMap Flux.empty<CloseableHttpResponse>()
+                    }
                 }
-            }
-            .blockFirst(Duration.ofMinutes(3))
+                .blockFirst(Duration.ofMinutes(3))
+        }
         return response!!
     }
 

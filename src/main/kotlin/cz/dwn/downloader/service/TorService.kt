@@ -22,15 +22,20 @@ import java.time.Duration
 @Service
 class TorService(private val tor: Tor, @Qualifier("torHttpClient") private val torHttpClient: CloseableHttpClient) {
 
+    private val torController: TorController
+
+    init {
+        val torControllerField: Field = Tor::class.java.getDeclaredField("torController")
+        torControllerField.isAccessible = true
+        torController = torControllerField.get(tor) as TorController
+    }
+
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
         test()
     }
 
     fun Tor.reload() {
-        val torControllerField: Field = Tor::class.java.getDeclaredField("torController")
-        torControllerField.isAccessible = true
-        val torController: TorController = torControllerField.get(this) as TorController
         torController.setConf("DisableNetwork", "1")
         torController.setConf("DisableNetwork", "0")
     }

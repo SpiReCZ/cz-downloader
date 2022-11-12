@@ -48,7 +48,7 @@ dependencies {
     // Tensorflow support
     implementation("ai.djl.spring:djl-spring-boot-starter-tensorflow-auto:0.19")
     // Tor support
-    implementation("com.github.theborakompanioni.bitcoin-spring-boot-starter:spring-tor-starter:0.4.1")
+    implementation("io.github.theborakompanioni:spring-tor-starter:0.5.0")
     // Custom added
     // Other
     developmentOnly("org.springframework.boot:spring-boot-devtools")

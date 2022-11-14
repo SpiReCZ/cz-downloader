@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets
 
 @Service
 class UloztoPageService(val torService: TorService) {
-    val log: Logger = LoggerFactory.getLogger("ulozto-page")
+    val log: Logger = LoggerFactory.getLogger("ulozto-page-service")
     val crawlClient: HttpClient = HttpClient.newBuilder().build()
 
     @Throws(RuntimeException::class)

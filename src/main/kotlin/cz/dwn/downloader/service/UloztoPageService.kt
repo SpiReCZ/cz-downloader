@@ -165,7 +165,7 @@ class UloztoPageService(val torService: TorService) {
 }
 
 fun parseSingle(s: String, regex: Regex): String? {
-    return regex.find(s)?.groupValues?.last()
+    return regex.find(s)?.groupValues?.getOrNull(1)
 }
 
 fun getFormDataAsString(formData: Map<String, String>): String {

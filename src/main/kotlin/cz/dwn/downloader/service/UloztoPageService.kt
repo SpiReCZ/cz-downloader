@@ -4,8 +4,11 @@ import cz.dwn.downloader.model.UloztoPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.event.ApplicationReadyEvent
+import org.springframework.context.event.EventListener
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.io.IOException
@@ -24,6 +27,14 @@ import java.nio.charset.StandardCharsets
 class UloztoPageService(val torService: TorService) {
     val log: Logger = LoggerFactory.getLogger("ulozto-page-service")
     val crawlClient: HttpClient = HttpClient.newBuilder().build()
+
+    @EventListener(ApplicationReadyEvent::class)
+    fun doSomethingAfterStartup() {
+        runBlocking {
+            //val page = crawl("")
+            //println(page)
+        }
+    }
 
     @Throws(RuntimeException::class)
     suspend fun crawl(url: String): UloztoPage {
@@ -60,9 +71,9 @@ class UloztoPageService(val torService: TorService) {
     @Throws(RuntimeException::class)
     protected suspend fun parse(page: UloztoPage) {
         // Parse filename only to the first | (Uloz.to sometimes add titles like "name | on-line video | Ulož.to" and so on)
-        val parsedFilename = parseSingle(page.body, "<title>([^\\|]*)\\s+\\|.*</title>".toRegex())!!
+        val parsedFilename = parseSingle(page.body, "<title>([^|]*)\\s+\\|.*</title>".toRegex())!!
         // Replace illegal characters in filename https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-        page.fileName = parsedFilename.replace("[<>:,\\\"/\\\\|\\?*]".toRegex(), "-")
+        page.fileName = parsedFilename.replace("[<>:,\"/\\\\|?*]".toRegex(), "-")
         var downloadFound = false
 
         val quickDownloadUrl = parseSingle(page.body, "href=\"(/quickDownload/[^\"]*)".toRegex())

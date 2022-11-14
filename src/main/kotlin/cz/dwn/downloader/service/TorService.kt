@@ -39,7 +39,7 @@ class TorService(tor: Tor, @Qualifier("torHttpClient") private val torHttpClient
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
         runBlocking {
-            test()
+            //test()
         }
     }
 

@@ -29,6 +29,7 @@ repositories {
 
 extra["springBootAdminVersion"] = "2.7.4"
 extra["springCloudVersion"] = "2021.0.4"
+extra["springDocVersion"] = "1.6.12"
 
 dependencies {
     // Default
@@ -50,6 +51,9 @@ dependencies {
     // Tor support
     implementation("io.github.theborakompanioni:spring-tor-starter:0.5.0")
     // Custom added
+    implementation("org.springdoc:springdoc-openapi-webflux-ui:${property("springDocVersion")}")
+    implementation("org.springdoc:springdoc-openapi-security:${property("springDocVersion")}")
+    implementation("org.springdoc:springdoc-openapi-native:${property("springDocVersion")}")
     // Other
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

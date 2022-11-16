@@ -1,6 +1,7 @@
-package cz.dwn.downloader.service
+package cz.dwn.downloader.service.ulozto
 
-import cz.dwn.downloader.model.UloztoPage
+import cz.dwn.downloader.model.ulozto.Page
+import cz.dwn.downloader.service.TorService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -25,8 +26,8 @@ import java.nio.charset.StandardCharsets
 
 @Service
 class UloztoPageService(val torService: TorService) {
-    val log: Logger = LoggerFactory.getLogger("ulozto-page-service")
-    val crawlClient: HttpClient = HttpClient.newBuilder().build()
+    private val log: Logger = LoggerFactory.getLogger("ulozto-page-service")
+    private val crawlClient: HttpClient = HttpClient.newBuilder().build()
 
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
@@ -37,9 +38,9 @@ class UloztoPageService(val torService: TorService) {
     }
 
     @Throws(RuntimeException::class)
-    suspend fun crawl(url: String): UloztoPage {
+    suspend fun crawl(url: String): Page {
         var parsedUrl = parseUrl(url)
-        val page = UloztoPage(parsedUrl.toString())
+        val page = Page(parsedUrl.toString())
         page.pageName = parsedUrl.host.lowercase()
         handlePornFile(page)
         handleTrackingLink(page)
@@ -69,7 +70,7 @@ class UloztoPageService(val torService: TorService) {
     }
 
     @Throws(RuntimeException::class)
-    protected suspend fun parse(page: UloztoPage) {
+    protected suspend fun parse(page: Page) {
         // Parse filename only to the first | (Uloz.to sometimes add titles like "name | on-line video | Ulož.to" and so on)
         val parsedFilename = parseSingle(page.body, "<title>([^|]*)\\s+\\|.*</title>".toRegex())!!
         // Replace illegal characters in filename https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
@@ -102,7 +103,7 @@ class UloztoPageService(val torService: TorService) {
     }
 
     @Throws(RuntimeException::class)
-    protected suspend fun handleTrackingLink(page: UloztoPage) {
+    protected suspend fun handleTrackingLink(page: Page) {
         if (page.pageName.contains("/file-tracking/")) {
             val requestBuilder = HttpRequest.newBuilder()
                 .uri(parseUrl(page.url).toURI())
@@ -117,7 +118,7 @@ class UloztoPageService(val torService: TorService) {
         }
     }
 
-    protected suspend fun handlePornFile(page: UloztoPage) {
+    protected suspend fun handlePornFile(page: Page) {
         if (page.pageName.contains("pornfile.cz")) {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create("https://pornfile.cz/porn-disclaimer/"))

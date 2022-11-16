@@ -1,6 +1,6 @@
-package cz.dwn.downloader.model
+package cz.dwn.downloader.model.ulozto
 
-data class UloztoPage(var url: String) {
+data class Page(var url: String) {
     lateinit var body: String
     var cookies: List<String> = ArrayList()
     lateinit var baseUrl: String

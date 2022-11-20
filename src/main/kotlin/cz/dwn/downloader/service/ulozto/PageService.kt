@@ -6,6 +6,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
+import org.apache.http.NameValuePair
+import org.apache.http.client.ClientProtocolException
+import org.apache.http.client.entity.UrlEncodedFormEntity
+import org.apache.http.client.methods.CloseableHttpResponse
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.client.methods.HttpRequestBase
+import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.http.impl.client.HttpClients
+import org.apache.http.message.BasicNameValuePair
+import org.apache.http.util.EntityUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -14,20 +25,15 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.MalformedURLException
-import java.net.URI
 import java.net.URL
-import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.net.http.HttpResponse.BodyHandlers
 import java.nio.charset.StandardCharsets
+import java.util.*
 
 
 @Service
 class UloztoPageService(val torService: TorService) {
     private val log: Logger = LoggerFactory.getLogger("ulozto-page-service")
-    private val crawlClient: HttpClient = HttpClient.newBuilder().build()
+    private val crawlClient: CloseableHttpClient = HttpClients.createDefault()
 
     @EventListener(ApplicationReadyEvent::class)
     fun doSomethingAfterStartup() {
@@ -35,6 +41,13 @@ class UloztoPageService(val torService: TorService) {
             //val page = crawl("")
             //println(page)
         }
+    }
+
+    suspend fun obtainLink(page: Page): String =
+        if (page.quickDownloadURL != null) page.quickDownloadURL!! else obtainSlowDownloadUrl(page)
+
+    suspend fun obtainSlowDownloadUrl(page: Page): String {
+        return ""
     }
 
     @Throws(RuntimeException::class)
@@ -47,26 +60,26 @@ class UloztoPageService(val torService: TorService) {
         parsedUrl = parseUrl(url)
         page.baseUrl = parsedUrl.toString().replace(parsedUrl.path, "")
 
-        val requestBuilder = HttpRequest.newBuilder()
-            .uri(parseUrl(page.url).toURI())
-            .GET()
-        page.cookies.forEach { requestBuilder.header(SET_COOKIE, it) }
+        val request = HttpGet(page.url)
+        page.cookies.forEach { request.addHeader(SET_COOKIE, it) }
 
-        val response = makeRequest(requestBuilder.build(), BodyHandlers.ofString()).single()
+        val response = makeRequest(request).single()
 
-        if (response.statusCode() != HttpStatus.OK.value()) {
-            if (response.statusCode() == HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS.value()) {
-                throw RuntimeException("File is unavailable due to legal reasons.")
-            } else {
-                throw RuntimeException("Wrong response code. File probably does not exist.")
+        response.use {
+            if (it.statusLine.statusCode != HttpStatus.OK.value()) {
+                if (it.statusLine.statusCode == HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS.value()) {
+                    throw RuntimeException("File is unavailable due to legal reasons.")
+                } else {
+                    throw RuntimeException("Wrong response code. File probably does not exist.")
+                }
             }
+
+            page.slug = parseSingle(parsedUrl.path, "/file/([^\\\\]*)/".toRegex())!!
+            page.body = EntityUtils.toString(it.entity, StandardCharsets.UTF_8)
+
+            parse(page)
+            return page
         }
-
-        page.slug = parseSingle(parsedUrl.path, "/file/([^\\\\]*)/".toRegex())!!
-        page.body = response.body()
-
-        parse(page)
-        return page
     }
 
     @Throws(RuntimeException::class)
@@ -105,38 +118,37 @@ class UloztoPageService(val torService: TorService) {
     @Throws(RuntimeException::class)
     protected suspend fun handleTrackingLink(page: Page) {
         if (page.pageName.contains("/file-tracking/")) {
-            val requestBuilder = HttpRequest.newBuilder()
-                .uri(parseUrl(page.url).toURI())
-                .GET()
-            page.cookies.forEach { requestBuilder.header(SET_COOKIE, it) }
-            val response = makeRequest(requestBuilder.build(), BodyHandlers.ofString()).single()
-            if (response.statusCode() != HttpStatus.MOVED_PERMANENTLY.value()) {
+
+            val request = HttpGet(page.url)
+            page.cookies.forEach { request.addHeader(SET_COOKIE, it) }
+
+            val response = makeRequest(request).single()
+            if (response.statusLine.statusCode != HttpStatus.MOVED_PERMANENTLY.value()) {
                 throw RuntimeException("Invalid request state, expected redirect with 'location' header.")
             }
-            val parsedUrl = parseUrl(response.headers().firstValue("location").orElseThrow())
+            val parsedUrl = parseUrl(response.getFirstHeader("location").value)
             page.url = parsedUrl.toString()
         }
     }
 
     protected suspend fun handlePornFile(page: Page) {
         if (page.pageName.contains("pornfile.cz")) {
-            val request = HttpRequest.newBuilder()
-                .uri(URI.create("https://pornfile.cz/porn-disclaimer/"))
-                .POST(HttpRequest.BodyPublishers.ofString(getFormDataAsString(PORNFILE_FORMDATA)))
-                .build()
-            val response = makeRequest(request, BodyHandlers.ofString()).single()
-            if (response.statusCode() != HttpStatus.SEE_OTHER.value()) {
+            val request = HttpPost("https://pornfile.cz/porn-disclaimer/")
+            request.entity = UrlEncodedFormEntity(PORNFILE_FORMDATA)
+
+            val response = makeRequest(request).single()
+            if (response.statusLine.statusCode != HttpStatus.SEE_OTHER.value()) {
                 throw RuntimeException("Failed to submit disclaimer.")
             }
-            page.cookies = response.headers().allValues(SET_COOKIE)
+            page.cookies = Arrays.stream(response.getHeaders(SET_COOKIE))
+                .map { it.value }
+                .toList()
         }
     }
 
-    protected fun <T> makeRequest(
-        request: HttpRequest,
-        bodyHandlers: HttpResponse.BodyHandler<T>
-    ): Flow<HttpResponse<T>> {
-        return flowOf(crawlClient.send(request, bodyHandlers))
+    @Throws(IOException::class, ClientProtocolException::class)
+    fun makeRequest(request: HttpRequestBase): Flow<CloseableHttpResponse> {
+        return flowOf(crawlClient.execute(request))
             .flowOn(Dispatchers.IO)
             .retryWhen { cause, attempt ->
                 log.warn("Retrying request..")
@@ -153,31 +165,17 @@ class UloztoPageService(val torService: TorService) {
         })
     }
 
-    protected suspend fun stripTrackingInfo(url: String): String {
-        return if (url.contains(TRACKING_SEPARATOR)) url.split(TRACKING_SEPARATOR)[0] else url
-    }
-
+    protected suspend fun stripTrackingInfo(url: String): String =
+        if (url.contains(TRACKING_SEPARATOR)) url.split(TRACKING_SEPARATOR)[0] else url
 
     companion object {
         const val TRACKING_SEPARATOR: String = "#!"
         const val SET_COOKIE = "set-cookie"
-        val PORNFILE_FORMDATA = mapOf("agree" to "Souhlasím", "_do" to "pornDisclaimer-submit")
+        val PORNFILE_FORMDATA = listOf<NameValuePair>(
+            BasicNameValuePair("agree", "Souhlasím"),
+            BasicNameValuePair("_do", "pornDisclaimer-submit")
+        )
     }
 }
 
-fun parseSingle(s: String, regex: Regex): String? {
-    return regex.find(s)?.groupValues?.getOrNull(1)
-}
-
-fun getFormDataAsString(formData: Map<String, String>): String {
-    val formBodyBuilder = StringBuilder()
-    for ((key, value) in formData.entries) {
-        if (formBodyBuilder.isNotEmpty()) {
-            formBodyBuilder.append("&")
-        }
-        formBodyBuilder.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
-        formBodyBuilder.append("=")
-        formBodyBuilder.append(URLEncoder.encode(value, StandardCharsets.UTF_8))
-    }
-    return formBodyBuilder.toString()
-}
+fun parseSingle(s: String, regex: Regex): String? = regex.find(s)?.groupValues?.getOrNull(1)

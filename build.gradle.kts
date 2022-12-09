@@ -45,7 +45,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     //implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     // Tensorflow support
-    implementation("ai.djl.spring:djl-spring-boot-starter-tensorflow-auto:0.19")
+    implementation("ai.djl.spring:djl-spring-boot-starter-tensorflow-auto:0.20")
     // Tor support
     implementation("io.github.theborakompanioni:spring-tor-starter:0.7.0")
     // Custom added
